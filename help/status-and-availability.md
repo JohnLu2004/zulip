@@ -21,7 +21,7 @@ You can set a status emoji, status message, or both.
 
 {start_tabs}
 
-{tab|desktop-web}
+{tab|via-user-card}
 
 {!self-user-card.md!}
 
@@ -29,6 +29,16 @@ You can set a status emoji, status message, or both.
 
 1. Click to select one of the common statuses, *or* choose any emoji and/or
    write a short message.
+
+1. Click **Save**.
+
+{tab|via-personal-settings}
+
+1. Click your profile picture on the top right.
+
+1. Click **Edit Status**.
+
+1. Click to select one of the most common statuses, *or* choose any emoji and/or write a short message.
 
 1. Click **Save**.
 
@@ -40,6 +50,42 @@ You can set a status emoji, status message, or both.
 
 1. Tap to select one of the common statuses, *or* choose any emoji and/or
    write a short message.
+
+1. Tap **Save**.
+
+{end_tabs}
+
+### Remove a status
+
+{start_tabs}
+
+{tab|via-user-card}
+
+{!self-user-card.md!}
+
+1. Click **Set a status**.
+
+1. Click the X beside the status.
+
+1. Click **Save**.
+
+{tab|via-personal-settings}
+
+1. Click your profile picture on the top right.
+
+1. Click **Edit Status**.
+
+1. Click the X beside the status.
+
+1. Click **Save**.
+
+{tab|mobile}
+
+{!mobile-profile-menu.md!}
+
+1. Tap **Set a status**.
+
+1. Tap the X beside the status.
 
 1. Tap **Save**.
 
