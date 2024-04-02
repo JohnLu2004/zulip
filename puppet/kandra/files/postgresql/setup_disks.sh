@@ -1,24 +1,32 @@
-#!/bin/sh
+#!/bin/bash
 set -x
 set -e
 
-# This file only exists on the server, ignore its non-existence locally
-# shellcheck disable=SC1091
-. "/sys/dev/block/259:0/uevent"
+set -o pipefail
 
-LOCALDISK="/dev/$DEVNAME"
-if ! grep -q "$LOCALDISK" /etc/fstab; then
-    echo "$LOCALDISK   /srv  xfs    nofail,noatime 1 1" >>/etc/fstab
+LOCALDISK=$(
+    nvme list -o json \
+        | jq -r '.Devices[] | select(.ModelNumber | contains("Instance Storage")) | .DevicePath' \
+        | head -n1
+)
+
+if [ -z "$LOCALDISK" ]; then
+    echo "No instance storage found!"
+    nvme list
+    exit 1
 fi
 
-if ! mountpoint -q /srv; then
+if ! grep -q "$LOCALDISK" /etc/fstab; then
+    echo "$LOCALDISK   /srv/data  xfs    nofail,noatime 1 1" >>/etc/fstab
+fi
+
+if [ ! -d /srv/data ]; then
+    mkdir /srv/data
+fi
+
+if ! mountpoint -q /srv/data; then
     mkfs.xfs "$LOCALDISK"
-    # Move any existing files/directories out of the way
-    TMPDIR=$(mktemp -d)
-    mv /srv/* "$TMPDIR"
-    mount /srv
-    mv "$TMPDIR/"* /srv
-    rmdir "$TMPDIR"
+    mount /srv/data
 fi
 
 if [ ! -L /var/lib/postgresql ]; then
@@ -26,11 +34,11 @@ if [ ! -L /var/lib/postgresql ]; then
     if [ -e /var/lib/postgresql ]; then
         mv /var/lib/postgresql "/root/postgresql-data-$(date +'%m-%d-%Y-%T')"
     fi
-    ln -s /srv/postgresql/ /var/lib
+    ln -s /srv/data/postgresql/ /var/lib
 fi
 
-if [ ! -e "/srv/postgresql" ]; then
+if [ ! -e "/srv/data/postgresql" ]; then
     service postgresql stop
-    mkdir "/srv/postgresql"
-    chown postgres:postgres /srv/postgresql
+    mkdir "/srv/data/postgresql"
+    chown postgres:postgres /srv/data/postgresql
 fi

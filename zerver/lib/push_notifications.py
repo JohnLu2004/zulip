@@ -7,7 +7,7 @@ import logging
 import re
 from dataclasses import dataclass
 from email.headerregistry import Address
-from functools import lru_cache
+from functools import cache
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -162,7 +162,7 @@ def has_apns_credentials() -> bool:
     return settings.APNS_TOKEN_KEY_FILE is not None or settings.APNS_CERT_FILE is not None
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_apns_context() -> Optional[APNsContext]:
     # We lazily do this import as part of optimizing Zulip's base
     # import time.
@@ -922,13 +922,7 @@ def get_mobile_push_content(rendered_content: str) -> str:
         return plain_text
 
     if settings.PUSH_NOTIFICATION_REDACT_CONTENT:
-        return (
-            "*"
-            + _(
-                "This organization has disabled including message content in mobile push notifications"
-            )
-            + "*"
-        )
+        return _("New message")
 
     elem = lxml.html.fragment_fromstring(rendered_content, create_parent=True)
     change_katex_to_raw_latex(elem)
@@ -1299,7 +1293,10 @@ def handle_push_notification(user_profile_id: int, missed_message: Dict[str, Any
     with transaction.atomic(savepoint=False):
         try:
             (message, user_message) = access_message(
-                user_profile, missed_message["message_id"], lock_message=True
+                user_profile,
+                missed_message["message_id"],
+                lock_message=True,
+                get_user_message="object",
             )
         except JsonableError:
             if ArchivedMessage.objects.filter(id=missed_message["message_id"]).exists():
@@ -1363,7 +1360,9 @@ def handle_push_notification(user_profile_id: int, missed_message: Dict[str, Any
     mentioned_user_group_id = missed_message.get("mentioned_user_group_id")
 
     if mentioned_user_group_id is not None:
-        user_group = UserGroup.objects.get(id=mentioned_user_group_id, realm=user_profile.realm)
+        user_group = UserGroup.objects.get(
+            id=mentioned_user_group_id, realm_id=user_profile.realm_id
+        )
         mentioned_user_group_name = user_group.name
 
     # Soft reactivate if pushing to a long_term_idle user that is personally mentioned

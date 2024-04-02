@@ -177,14 +177,10 @@
                little layout shifts with pills. */
             flex: 0 0 auto;
             height: var(--compose-recipient-box-min-height);
-            /* Round up natural width to next whole pixel. */
-            width: 23px;
 
-            .fa-angle-right {
-                font-size: 0.9em;
-                -webkit-text-stroke: 0.05em;
-                align-self: center;
-                margin: 0 5px;
+            .zulip-icon-chevron-right {
+                font-size: 16px;
+                color: var(--color-compose-chevron-arrow);
             }
         }
 
@@ -1176,7 +1172,7 @@ textarea.new_message_textarea,
 
     .zulip-icon-chevron-down {
         padding-left: 5px;
-        color: hsl(0deg 0% 58%);
+        color: var(--color-compose-chevron-arrow);
         font-weight: lighter;
     }
 
@@ -1324,7 +1320,7 @@ textarea.new_message_textarea,
        the 8px from the negative left margin. */
     max-width: calc(100% + 8px);
     display: flex;
-    gap: 1px;
+    gap: 2px;
 
     .compose-drafts-text {
         /* Set an ellipsis when the translated
@@ -1337,13 +1333,13 @@ textarea.new_message_textarea,
     }
 
     @media (width < $mc_min) {
-        margin-left: 0;
-        /* With no negative left margin,
-           hold the max width to 100%. */
-        max-width: 100%;
+        /* Reduce the padding on the sides so the
+        button's edge isn't too close to the textarea */
+        margin-left: -3px;
+        max-width: calc(100% + 3px);
         /* Align the `Drafts` text with the
            send icon below. */
-        padding: 0 5px;
+        padding: 0 3px;
     }
 }
 

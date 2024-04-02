@@ -1,3 +1,4 @@
+import itertools
 import json
 import operator
 import os
@@ -884,6 +885,10 @@ class StripeTest(StripeTestCase):
             "plan": None,
             "proration": False,
             "quantity": self.seat_count,
+            "period": {
+                "start": datetime_to_timestamp(self.now),
+                "end": datetime_to_timestamp(add_months(self.now, 12)),
+            },
         }
         for key, value in line_item_params.items():
             self.assertEqual(item0.get(key), value)
@@ -1022,6 +1027,10 @@ class StripeTest(StripeTestCase):
             "plan": None,
             "proration": False,
             "quantity": 123,
+            "period": {
+                "start": datetime_to_timestamp(self.now),
+                "end": datetime_to_timestamp(add_months(self.now, 12)),
+            },
         }
         for key, value in line_item_params.items():
             self.assertEqual(item.get(key), value)
@@ -4591,11 +4600,11 @@ class BillingHelpersTest(ZulipTestCase):
         for i, boundary in enumerate(period_boundaries):
             self.assertEqual(add_months(anchor, i), boundary)
         # Test next_month for small values
-        for last, next_ in zip(period_boundaries[:-1], period_boundaries[1:]):
+        for last, next_ in itertools.pairwise(period_boundaries):
             self.assertEqual(next_month(anchor, last), next_)
         # Test next_month for large values
         period_boundaries = [dt.replace(year=dt.year + 100) for dt in period_boundaries]
-        for last, next_ in zip(period_boundaries[:-1], period_boundaries[1:]):
+        for last, next_ in itertools.pairwise(period_boundaries):
             self.assertEqual(next_month(anchor, last), next_)
 
     def test_compute_plan_parameters(self) -> None:
@@ -9079,11 +9088,14 @@ class TestRemoteServerBillingFlow(StripeTestCase, RemoteServerTestCase):
             self.remote_server.plan_type, RemoteZulipServer.PLAN_TYPE_SELF_MANAGED_LEGACY
         )
 
-        with mock.patch("stripe.Invoice.create") as invoice_create, time_machine.travel(
-            plan_end_date, tick=False
-        ):
-            send_server_data_to_push_bouncer(consider_usage_statistics=False)
+        with mock.patch("stripe.Invoice.create") as invoice_create, mock.patch(
+            "corporate.lib.stripe.send_email"
+        ) as send_email, time_machine.travel(plan_end_date, tick=False):
             invoice_plans_as_needed()
+            # Verify that for legacy plan with no next plan scheduled,
+            # invoice overdue email is not sent even if the last audit log
+            # update was 3 months ago.
+            send_email.assert_not_called()
             # The legacy plan is downgraded, no invoice created.
             invoice_create.assert_not_called()
 
@@ -9142,6 +9154,15 @@ class TestRemoteServerBillingFlow(StripeTestCase, RemoteServerTestCase):
             CustomerPlan.TIER_SELF_HOSTED_BUSINESS
         )
         licenses = max(min_licenses, server_user_count)
+
+        with mock.patch("stripe.Invoice.create") as invoice_create, mock.patch(
+            "corporate.lib.stripe.send_email"
+        ) as send_email, time_machine.travel(end_date, tick=False):
+            invoice_plans_as_needed()
+            # Verify that for legacy plan with next plan scheduled, invoice
+            # overdue email is sent if the last audit log is stale.
+            send_email.assert_called()
+            invoice_create.assert_not_called()
 
         with time_machine.travel(end_date, tick=False):
             send_server_data_to_push_bouncer(consider_usage_statistics=False)

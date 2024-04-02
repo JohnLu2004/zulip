@@ -1,6 +1,5 @@
 from typing import Any, Dict, Optional
 
-from zerver.actions.create_user import create_historical_user_messages
 from zerver.actions.user_topics import do_set_user_topic_visibility_policy
 from zerver.lib.emoji import check_emoji_request, get_emoji_data
 from zerver.lib.exceptions import ReactionExistsError
@@ -13,6 +12,7 @@ from zerver.lib.message import (
 from zerver.lib.message_cache import update_message_cache
 from zerver.lib.stream_subscription import subscriber_ids_with_stream_history_access
 from zerver.lib.streams import access_stream_by_id
+from zerver.lib.user_message import create_historical_user_messages
 from zerver.models import Message, Reaction, Recipient, Stream, UserMessage, UserProfile
 from zerver.tornado.django_api import send_event_on_commit
 
@@ -126,7 +126,9 @@ def check_add_reaction(
     emoji_code: Optional[str],
     reaction_type: Optional[str],
 ) -> None:
-    message, user_message = access_message(user_profile, message_id, lock_message=True)
+    message, has_user_message = access_message(
+        user_profile, message_id, lock_message=True, get_user_message="exists"
+    )
 
     if emoji_code is None or reaction_type is None:
         emoji_data = get_emoji_data(message.realm_id, emoji_name)
@@ -179,7 +181,7 @@ def check_add_reaction(
         # realm emoji).
         check_emoji_request(user_profile.realm, emoji_name, emoji_code, reaction_type)
 
-    if user_message is None:
+    if not has_user_message:
         # See called function for more context.
         create_historical_user_messages(user_id=user_profile.id, message_ids=[message.id])
 
